@@ -27,6 +27,14 @@
             color: #ff4e50;
             font-weight: bold;
         }
+        #teklif-alani {
+            background-color: #1a3a2a;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px dashed #ffbc42;
+            text-align: center;
+            margin: 15px 0;
+        }
     </style>
 </head>
 <body>
@@ -43,7 +51,11 @@
             <div id="bot-indirilen-kartlar" class="bot-indirilenler"></div>
         </div>
 
-        <hr>
+        <!-- ORTA ALAN: TEKLİF PANOSU -->
+        <div id="teklif-alani">
+            <span style="color: #fff;">Yerdeki Durum:</span> 
+            <strong id="teklif-kart-yazi" style="color: #ffd700; font-size: 18px;">-</strong>
+        </div>
 
         <!-- OYUNCU BÖLÜMÜ -->
         <div class="bolum">
@@ -55,7 +67,8 @@
         <!-- HAMLE BUTONLARI -->
         <div id="butonlar">
             <button onclick="kombinasyonDene()">Seçili Kartlarla Kombinasyon Yap</button>
-            <button onclick="pasGecDene()" class="pas-btn">Seçili Kartı Kapalı At (Pas)</button>
+            <button onclick="pasGecDene()" class="pas-btn">Seçili Kartı Teklif Et (Pas)</button>
+            <button onclick="yerdekiKartiAlDene()" id="yerden-al-btn" style="background-color: #2196F3; display: none; margin-top: 5px;">Yerdeki Teklif Kartını Al</button>
         </div>
         
         <div id="deste-bilgi">
@@ -80,6 +93,7 @@
         }
 
         function arayuzuGuncelle() {
+            // 1. Oyuncu Elini Çiz
             const oyuncuAlani = document.getElementById("oyuncu-kartlari");
             oyuncuAlani.innerHTML = "";
             oyuncuEli.forEach((kart, index) => {
@@ -88,12 +102,14 @@
                 oyuncuAlani.innerHTML += `<div class="${kartKlas} ${isSecili}" onclick="kartSec(${index})">${kart}</div>`;
             });
 
+            // 2. Rakip Elini Çiz (Kapalı Kapak Emojisiyle)
             const rakipAlani = document.getElementById("rakip-kartlari");
             rakipAlani.innerHTML = "";
             rakipEli.forEach(() => {
                 rakipAlani.innerHTML += `<div class="kart kapali">🎴</div>`;
             });
 
+            // 3. Botun En Son İndirdiği Kartları Göster
             const botIndirilenAlani = document.getElementById("bot-indirilen-kartlar");
             botIndirilenAlani.innerHTML = "";
             rakipSonIndirilenler.forEach(kart => {
@@ -101,11 +117,20 @@
                 botIndirilenAlani.innerHTML += `<div class="${kartKlas}">${kart}</div>`;
             });
 
+            // 4. Yazıları ve Skorları Doldur
             document.getElementById("oyuncu-puan-yazi").innerText = oyuncuPuan;
             document.getElementById("rakip-puan-yazi").innerText = rakipPuan;
             document.getElementById("oyuncu-ceza-yazi").innerText = suAnkiCezayiHesapla(oyuncuCezaHavuzu);
             document.getElementById("kalan-kart-yazi").innerText = deste.length;
             document.getElementById("bot-durum-yazi").innerText = rakipSonHamleTipi;
+
+            // 5. Mavi "Yerden Al" Butonunu Kontrol Et
+            const yerdenAlBtn = document.getElementById("yerden-al-btn");
+            if (yerdekiTeklifKarti !== null && teklifSahibi === "RAKIP") {
+                yerdenAlBtn.style.display = "inline-block";
+            } else {
+                yerdenAlBtn.style.display = "none";
+            }
         }
 
         function kombinasyonDene() {
@@ -121,14 +146,21 @@
                 alert("Seçtiğin kartlardan geçerli bir çift, 4'lü veya seri çıkmıyor!");
                 return;
             }
-
-            if (analiz.tip === "CIFT" && secilenKartlar.length !== 2) {
+            if (analiz.tip.includes("ÇİFT") && secilenKartlar.length !== 2) {
                 alert("Çift kombinasyonu için sadece 2 kart seçmelisin!");
                 return;
             }
-            if ((analiz.tip === "4LU" || analiz.tip.includes("SERI")) && secilenKartlar.length !== 4) {
+            if ((analiz.tip.includes("4'LÜ") || analiz.tip.includes("SERİ")) && secilenKartlar.length !== 4) {
                 alert("4'lü veya Seri yapabilmek için elindeki 4 kartın hepsini birden seçmelisin!");
                 return;
+            }
+
+            // Eğer yerde botun bıraktığı ve bizim almadığımız bir teklif varsa, pas geçip kombinasyon indirdiğimiz için artık o kart botun cezasına kalıcı yazılır.
+            if(yerdekiTeklifKarti !== null && teklifSahibi === "RAKIP") {
+                rakipCezaHavuzu.push(yerdekiTeklifKarti);
+                yerdekiTeklifKarti = null;
+                teklifSahibi = null;
+                document.getElementById("teklif-kart-yazi").innerText = "-";
             }
 
             oyuncuPuan += analiz.puan;
@@ -159,20 +191,27 @@
 
         function pasGecDene() {
             if (secilenKartEndeksleri.length !== 1) {
-                alert("Pas geçmek için elinden tam olarak 1 kapalı kart seçmelisin!");
+                alert("Pas geçmek için elinden tam olarak 1 kart seçmelisin!");
                 return;
             }
 
+            // Biz pas geçerken yerde hala botun eski bir teklif kartı duruyorsa, onu reddetmiş oluruz ve botun cezasına kalıcı işlenir.
+            if(yerdekiTeklifKarti !== null && teklifSahibi === "RAKIP") {
+                rakipCezaHavuzu.push(yerdekiTeklifKarti);
+            }
+
             let index = secilenKartEndeksleri[0];
-            let atilanKart = oyuncuEli.splice(index, 1)[0];
-            oyuncuCezaHavuzu.push(atilanKart);
+            yerdekiTeklifKarti = oyuncuEli.splice(index, 1)[0];
+            teklifSahibi = "OYUNCU";
+            
+            document.getElementById("teklif-kart-yazi").innerText = yerdekiTeklifKarti + " (Senin Teklifin)";
 
             if (deste.length > 0) {
                 oyuncuEli.push(deste.pop());
             }
 
             secilenKartEndeksleri = [];
-            document.getElementById("bildirim-alani").innerText = "Pas geçtin. Sıra rakipte...";
+            document.getElementById("bildirim-alani").innerText = "Pas geçtin ve kartını teklif ettin. Sıra rakipte...";
             arayuzuGuncelle();
 
             if (deste.length === 0 && oyuncuEli.length === 0) {
@@ -188,14 +227,10 @@
         }
 
         function oyunFinaliYap() {
-            oyuncuEli.forEach(k => oyuncuCezaHavuzu.push(k));
-            rakipEli.forEach(k => rakipCezaHavuzu.push(k));
-            oyuncuEli = [];
-            rakipEli = [];
-            arayuzuGuncelle();
             oyunBitti();
         }
 
+        // Oyunu ve arayüzü tetikliyoruz
         oyunuBaslat();
         arayuzuGuncelle();
     </script>
