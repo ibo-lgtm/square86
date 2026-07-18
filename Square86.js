@@ -1,5 +1,5 @@
 // ==========================================
-// SQUARE86 - ÖZEL PUANLAMA VE OYUN MOTORU
+// SQUARE86 - STRATEJİ & PUANLAMA MOTORU
 // ==========================================
 
 let deste = [];
@@ -11,10 +11,14 @@ let rakipPuan = 0;
 let oyuncuCezaHavuzu = [];
 let rakipCezaHavuzu = [];
 
+// Teklif kuralı değişkenleri
+let yerdekiTeklifKarti = null; 
+let teklifSahibi = null; // "OYUNCU" veya "RAKIP"
+
 let rakipSonIndirilenler = [];
 let rakipSonHamleTipi = "Oyun başladı, senin hamlen bekleniyor...";
 
-// 1. DESTE OLUŞTURMA (86 Kart + 1 Joker)
+// 1. DESTE HAZIRLAMA (86 Standart Kart + 1 Joker)
 function desteOlustur() {
     let yeniDeste = [];
     const kartDagilimi = {
@@ -41,7 +45,7 @@ function desteyiKaristir(kartlar) {
     return kartlar;
 }
 
-// 3. OYUNU BAŞLATMA
+// 3. SIFIRDAN OYUN BAŞLATMA
 function oyunuBaslat() {
     deste = desteyiKaristir(desteOlustur());
     
@@ -52,21 +56,21 @@ function oyunuBaslat() {
     rakipPuan = 0;
     oyuncuCezaHavuzu = [];
     rakipCezaHavuzu = [];
+    yerdekiTeklifKarti = null;
+    teklifSahibi = null;
     rakipSonIndirilenler = [];
-    rakipSonHamleTipi = "Oyun başladı, senin hamlen bekleniyor...";
-    
-    alert("Square86 Başladı! Yeni kurallarla kartlar dağıtıldı.");
+    rakipSonHamleTipi = "Oyun başladı, hamleni yapabilirsin.";
 }
 
-// 4. GELİŞMİŞ VE DÜZELTİLMİŞ EL HESAPLAMA MOTORU
+// 4. MATEMATİKSEL KOMBİNASYON HESAPLAYICI (ÖZEL KURALLAR)
 function eliHesapla(kartlar) {
     if (kartlar.length === 0) return { tip: "PAS", puan: 0 };
 
     let jokerAdeti = kartlar.filter(k => k === "JOKER").length;
     let normalKartlar = kartlar.filter(k => k !== "JOKER").map(Number).sort((a, b) => a - b);
 
-    // --- 2 KARTLI KOMBİNASYON (ÇİFT) ---
-    // Kural: Sayı x Sayı (Örn: 6x6 = 36)
+    // --- 2 KARTLI KOMBİNASYONLAR (ÇİFT) ---
+    // Formül: Sayı x Sayı (Örn: 6x6 = 36)
     if (kartlar.length === 2) {
         if (jokerAdeti === 1 && normalKartlar.length === 1) {
             let sayi = normalKartlar[0];
@@ -80,30 +84,21 @@ function eliHesapla(kartlar) {
 
     // --- 4 KARTLI KOMBİNASYONLAR (4'LÜ veya SERİ) ---
     if (kartlar.length === 4) {
-        // Hepsi Aynı mı? (4'lü) -> Kural: Toplamları x O Sayı (Örn: (5+5+5+5)x5 = 100)
+        
+        // A) 4'LÜ KONTROLÜ -> Formül: Toplamları x Sayı (Örn: (5+5+5+5)x5 = 100)
         let hepsiAyni = true;
-        if (jokerAdeti === 1) {
-            for (let i = 1; i < normalKartlar.length; i++) {
-                if (normalKartlar[i] !== normalKartlar[0]) hepsiAyni = false;
-            }
-            if (hepsiAyni && normalKartlar.length === 3) {
-                let sayi = normalKartlar[0];
-                return { tip: "JOKERLİ 4'LÜ", puan: (sayi * 4) * sayi };
-            }
-        } else if (jokerAdeti === 0) {
-            for (let i = 1; i < normalKartlar.length; i++) {
-                if (normalKartlar[i] !== normalKartlar[0]) hepsiAyni = false;
-            }
+        if (normalKartlar.length > 0) {
+            let kontrolSayisi = normalKartlar[0];
+            normalKartlar.forEach(k => { if(k !== kontrolSayisi) hepsiAyni = false; });
             if (hepsiAyni) {
-                let sayi = normalKartlar[0];
-                return { tip: "4'LÜ", puan: (sayi * 4) * sayi };
+                return { tip: jokerAdeti === 1 ? "JOKERLİ 4'LÜ" : "4'LÜ", puan: (kontrolSayisi * 4) * kontrolSayisi };
             }
         }
 
-        // Sıralı mı? (Seri Kontrolü) -> Kural: Toplamları x En Büyük Sayı (Örn: (3+4+5+6)x6 = 108)
+        // B) SERİ KONTROLÜ -> Formül: Elemanlar Toplamı x Serinin En Büyük Sayısı
         let ardisikMi = true;
-        
-        // JOKERSİZ DÜZ SERİ
+
+        // Jokersiz Düz Seri (Örn: 3-4-5-6 -> (18) x 6 = 108)
         if (jokerAdeti === 0) {
             for (let i = 0; i < normalKartlar.length - 1; i++) {
                 if (normalKartlar[i+1] !== normalKartlar[i] + 1) ardisikMi = false;
@@ -114,9 +109,8 @@ function eliHesapla(kartlar) {
                 return { tip: "SERİ", puan: toplam * enBuyuk };
             }
         } 
-        // 1 JOKERLİ SERİ
+        // Jokerli Seri Kontrolü
         else if (jokerAdeti === 1) {
-            // Durum A: Joker ortada veya uçta bir boşluğu dolduruyor
             let bosluklar = [];
             for (let i = 0; i < normalKartlar.length - 1; i++) {
                 let fark = normalKartlar[i+1] - normalKartlar[i];
@@ -125,26 +119,17 @@ function eliHesapla(kartlar) {
                 }
             }
 
-            // Eğer sayılar kendi içinde ardışıksa veya sadece 1 boşluk varsa geçerlidir
+            // Araya joker giriyorsa (Örn: 3-4-[Jok]-6)
             if (bosluklar.length === 1 && (normalKartlar[2] - normalKartlar[0] === 3)) {
-                let eksikSayi = bosluklar[0];
-                let tamSeri = [...normalKartlar, eksikSayi].sort((a,b)=>a-b);
-                let toplam = tamSeri.reduce((a, b) => a + b, 0);
-                let enBuyuk = tamSeri[tamSeri.length - 1];
-                return { tip: "JOKERLİ SERİ", puan: toplam * enBuyuk };
+                let tamSeri = [...normalKartlar, bosluklar[0]].sort((a,b)=>a-b);
+                return { tip: "JOKERLİ SERİ", puan: tamSeri.reduce((a,b)=>a+b,0) * tamSeri[3] };
             }
-            // Durum B: Sayılar tamamen ardışık, joker serinin başına veya sonuna eklenecek
+            // Uca joker giriyorsa (Örn: 3-4-5-[Jok] -> Joker 6 olur)
             else if (bosluklar.length === 0 && (normalKartlar[2] - normalKartlar[0] === 2)) {
-                // Önceliği puandan ötürü serinin sonuna (en büyük sayı yapmaya) veriyoruz
-                let eksikSayi = normalKartlar[normalKartlar.length - 1] + 1;
-                // Eğer en büyük sayı 10'u geçiyorsa serinin başına ekle (10 sınır kuralı)
-                if (eksikSayi > 10) {
-                    eksikSayi = normalKartlar[0] - 1;
-                }
+                let eksikSayi = normalKartlar[2] + 1;
+                if (eksikSayi > 10) eksikSayi = normalKartlar[0] - 1; // 10 sınırını aşarsa başa koy
                 let tamSeri = [...normalKartlar, eksikSayi].sort((a,b)=>a-b);
-                let toplam = tamSeri.reduce((a, b) => a + b, 0);
-                let enBuyuk = tamSeri[tamSeri.length - 1];
-                return { tip: "JOKERLİ SERİ", puan: toplam * enBuyuk };
+                return { tip: "JOKERLİ SERİ", puan: tamSeri.reduce((a,b)=>a+b,0) * tamSeri[3] };
             }
         }
     }
@@ -152,34 +137,82 @@ function eliHesapla(kartlar) {
     return { tip: "PAS", puan: 0 };
 }
 
-// 5. CEZA HESAPLAMA MOTORU (Kural: Kartların Değerinin 10 Katı)
+// 5. ANLIK CEZA GÖSTERGESİ (Kural: Kart Değerlerinin 10 Katı)
 function suAnkiCezayiHesapla(havuz) {
     if (!havuz || havuz.length === 0) return 0;
     return havuz.reduce((toplam, kart) => {
-        let kartDegeri = kart === "JOKER" ? 20 : Number(kart); // Joker elde kalırsa taban 20 kabul edilir
-        return toplam + (kartDegeri * 10); // Her kartın 10 katı ceza yazılır
+        let val = kart === "JOKER" ? 20 : Number(kart);
+        return toplam + (val * 10);
     }, 0);
 }
 
-// 6. RAKİP YAPAY ZEKASI (BOT)
+// 6. OYUNCU İÇİN: MAVİ BUTONA BASIP YERDEKİ TEKLİFİ KAPMA HAMLESİ
+function yerdekiKartiAlDene() {
+    if (!yerdekiTeklifKarti || teklifSahibi !== "RAKIP") return;
+    
+    oyuncuEli.push(yerdekiTeklifKarti);
+    document.getElementById("bildirim-alani").innerText = `Rakibin teklif ettiği ${yerdekiTeklifKarti} kartını eline çektin! Rakip cezadan kurtuldu.`;
+    
+    yerdekiTeklifKarti = null;
+    teklifSahibi = null;
+    document.getElementById("teklif-kart-yazi").innerText = "-";
+    
+    if(window.arayuzuGuncelle) window.arayuzuGuncelle();
+}
+
+// 7. RAKİP YAPAY ZEKASI (STRATEJİK BOT HAMLELERİ)
 function rakipHamleYap() {
     if (rakipEli.length === 0) return;
 
-    // Bot elindeki 4'lü veya Seri kontrolü yapar
+    // --- FAZ A: OYUNCUNUN TEKLİF ETTİĞİ KARTIN ANALİZİ ---
+    if (yerdekiTeklifKarti !== null && teklifSahibi === "OYUNCU") {
+        let testEli = [...rakipEli, yerdekiTeklifKarti];
+        let seriyeYariyorMu = false;
+
+        // Bot kartı eline alıp 4'lü kombinasyon yapabiliyor mu diye bakar
+        for(let i=0; i<testEli.length; i++) {
+            for(let j=i+1; j<testEli.length; j++) {
+                for(let k=j+1; k<testEli.length; k++) {
+                    for(let l=k+1; l<testEli.length; l++) {
+                        if(eliHesapla([testEli[i], testEli[j], testEli[k], testEli[l]]).tip !== "PAS") seriyeYariyorMu = true;
+                    }
+                }
+            }
+        }
+
+        // Taktiksel Karar: Kart işine yarıyorsa, Joker ise ya da büyük sayıysa (>= 8) bot kartı KAPANIR!
+        if (seriyeYariyorMu || yerdekiTeklifKarti === "JOKER" || Number(yerdekiTeklifKarti) >= 8) {
+            rakipEli.push(yerdekiTeklifKarti);
+            rakipSonHamleTipi = `Rakip yerdeki ${yerdekiTeklifKarti} kartını kapmayı seçti. (Cezan silindi!)`;
+            yerdekiTeklifKarti = null;
+            teklifSahibi = null;
+            document.getElementById("teklif-kart-yazi").innerText = "-";
+            return; // Hamlesini alarak kullandı, bir sonraki el kombinasyon yapacak.
+        } else {
+            // Bot kartı istemedi! Desteden çekecek. Oyuncunun kartı artık kalıcı olarak cezaya dönüşür!
+            oyuncuCezaHavuzu.push(yerdekiTeklifKarti);
+            yerdekiTeklifKarti = null;
+            teklifSahibi = null;
+            document.getElementById("teklif-kart-yazi").innerText = "-";
+        }
+    }
+
+    // Bot eksik kartı varsa hamlesine başlamadan önce desteden tamamlar
+    if (rakipEli.length < 4 && deste.length > 0) {
+        rakipEli.push(deste.pop());
+    }
+
+    // --- FAZ B: KOMBİNASYON İNDİRME HAMLESİ ---
     let analiz4LU = eliHesapla(rakipEli);
     if (analiz4LU.tip !== "PAS") {
         rakipPuan += analiz4LU.puan;
         rakipSonIndirilenler = [...rakipEli];
         rakipSonHamleTipi = `Rakip ${analiz4LU.tip} yaptı! (+${analiz4LU.puan} Puan)`;
         rakipEli = [];
-        
-        while(rakipEli.length < 4 && deste.length > 0) {
-            rakipEli.push(deste.pop());
-        }
         return;
     }
 
-    // Bot elindeki çiftleri kontrol eder
+    // Çift Kontrolü
     for (let i = 0; i < rakipEli.length; i++) {
         for (let j = i + 1; j < rakipEli.length; j++) {
             let ikili = [rakipEli[i], rakipEli[j]];
@@ -188,43 +221,31 @@ function rakipHamleYap() {
                 rakipPuan += analiz2LI.puan;
                 rakipSonIndirilenler = [...ikili];
                 rakipSonHamleTipi = `Rakip ${analiz2LI.tip} indirdi! (+${analiz2LI.puan} Puan)`;
-                
                 rakipEli.splice(j, 1);
                 rakipEli.splice(i, 1);
-                
-                while(rakipEli.length < 4 && deste.length > 0) {
-                    rakipEli.push(deste.pop());
-                }
                 return;
             }
         }
     }
 
-    // Mecburen pas geçme: En büyük kartını ceza havuzuna kapalı atar
+    // --- FAZ C: PAS GEÇME & TEKLİF SUNMA ---
+    // Elinde hamle yoksa en yüksek ceza riski taşıyan kartını teklif alanına açık atar
     let enBuyukEndeks = 0;
     let enBuyukDeger = -1;
-    
     rakipEli.forEach((k, idx) => {
         let val = k === "JOKER" ? 0 : Number(k);
-        if(val > enBuyukDeger) {
-            enBuyukDeger = val;
-            enBuyukEndeks = idx;
-        }
+        if(val > enBuyukDeger) { enBuyukDeger = val; enBuyukEndeks = idx; }
     });
 
-    let atilan = rakipEli.splice(enBuyukEndeks, 1)[0];
-    rakipCezaHavuzu.push(atilan);
+    yerdekiTeklifKarti = rakipEli.splice(enBuyukEndeks, 1)[0];
+    teklifSahibi = "RAKIP";
     rakipSonIndirilenler = [];
-    rakipSonHamleTipi = "Rakip Pas geçti (1 kart kapalı attı).";
-
-    if (deste.length > 0) {
-        rakipEli.push(deste.pop());
-    }
+    rakipSonHamleTipi = `Rakip pas geçti ve yere ${yerdekiTeklifKarti} kartını teklif etti!`;
+    document.getElementById("teklif-kart-yazi").innerText = yerdekiTeklifKarti + " (Rakibin Teklifi)";
 }
 
-// 7. OYUN BİTTİ EKRANI (Elde kalan kartlar cezaya eklenir)
+// 8. OYUN SONU SKOR HESAPLAMA (Elde kalanlar da 10 katı cezaya dahil edilir)
 function oyunBitti() {
-    // Elde kalan kartlar da ceza havuzuna dahil edilir
     oyuncuEli.forEach(k => oyuncuCezaHavuzu.push(k));
     rakipEli.forEach(k => rakipCezaHavuzu.push(k));
     
@@ -235,13 +256,13 @@ function oyunBitti() {
     let rakipFinalSkor = rakipPuan - rakipNetCeza;
 
     let sonucMesaji = `=== OYUN BİTTİ (Deste Tükendi) ===\n\n`;
-    sonucMesaji += `SENİN NET SKORUN: ${oyuncuFinalSkor}\n(Kombinasyon: +${oyuncuPuan} | 10 Kat Ceza Hatası: -${oyuncuNetCeza})\n\n`;
-    sonucMesaji += `RAKİBİN NET SKORUN: ${rakipFinalSkor}\n(Kombinasyon: +${rakipPuan} | 10 Kat Ceza Hatası: -${rakipNetCeza})\n\n`;
+    sonucMesaji += `SENİN NET SKORUN: ${oyuncuFinalSkor}\n(Kombinasyon: +${oyuncuPuan} | 10 Kat Ceza: -${oyuncuNetCeza})\n\n`;
+    sonucMesaji += `RAKİBİN NET SKORUN: ${rakipFinalSkor}\n(Kombinasyon: +${rakipPuan} | 10 Kat Ceza: -${rakipNetCeza})\n\n`;
 
     if (oyuncuFinalSkor > rakipFinalSkor) {
-        sonucMesaji += "🎉 TEBRİKLER! EN YÜKSEK PUANA ULAŞARAK OYUNU KAZANDIN! 🎉";
+        sonucMesaji += "🎉 TEBRİKLER! OYUNU KAZANDIN! 🎉";
     } else if (oyuncuFinalSkor < rakipFinalSkor) {
-        sonucMesaji += "❌ MAALESEF RAKİP DAHA YÜKSEK PUAN ALDI! ❌";
+        sonucMesaji += "❌ MAALESEF RAKİP KAZANDI! ❌";
     } else {
         sonucMesaji += "🤝 BERABERE BİTTİ! 🤝";
     }
