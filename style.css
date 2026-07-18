@@ -1,0 +1,120 @@
+/* SQUARE86 GENEL TASARIM VE RENKLER */
+body {
+    background-color: #1a2a22; /* Koyu yeşil kumarhane masası tonu */
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+#oyun-alani {
+    background-color: #243d30;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+    border: 2px solid #345c47;
+}
+
+h2 {
+    margin-top: 0;
+    color: #ffd700; /* Altın sarısı başlık */
+    letter-spacing: 2px;
+}
+
+.bolum {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+}
+
+/* KARTLARIN YAN YANA DİZİLMESİ */
+.kart-alani {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 15px 0;
+    min-height: 80px;
+}
+
+/* TEK BİR KARTIN TASARIMI */
+.kart {
+    width: 60px;
+    height: 85px;
+    background-color: #ffffff;
+    color: #1a2a22;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    border: 2px solid #dcdcdc;
+    transition: transform 0.2s;
+}
+
+/* JOKER KARTININ ÖZEL RENGİ */
+.kart.joker {
+    background: linear-gradient(45deg, #ff4e50, #f9d423);
+    color: #ffffff;
+    border-color: #ffd700;
+}
+
+/* RAKİBİN KAPALI KARTLARI */
+.kart.kapali {
+    background-color: #b22222; /* Kırmızı kart arkası */
+    color: #ffffff;
+    border-color: #8b0000;
+}
+
+hr {
+    border: 0;
+    height: 1px;
+    background: #345c47;
+    margin: 20px 0;
+}
+
+/* BUTONLARIN TASARIMI */
+#butonlar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+button {
+    background-color: #ffd700;
+    color: #1a2a22;
+    border: none;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    width: 100%;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+button.pas-btn {
+    background-color: #c0392b;
+    color: #ffffff;
+}
+
+#deste-bilgi {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #a2b9ad;
+}

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Square86 - Kart Oyunu</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .kart.secili {
+            border: 3px solid #ffd700 !important;
+            transform: translateY(-10px);
+            background-color: #e0f7fa !important;
+        }
+        .bot-indirilenler {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .bot-indirilenler .kart {
+            width: 40px;
+            height: 55px;
+            font-size: 14px;
+            background-color: #f0f0f0;
+        }
+        .ceza-yazi {
+            color: #ff4e50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="oyun-alani">
+        <h2>SQUARE86</h2>
+        
+        <!-- RAKİP BÖLÜMÜ -->
+        <div class="bolum">
+            <h3>Rakip (Bot)</h3>
+            <div id="rakip-kartlari" class="kart-alani"></div>
+            <p>Rakip Puanı: <span id="rakip-puan-yazi">0</span></p>
+            <p style="font-size: 13px; color: #ffbc42;" id="bot-durum-yazi">Henüz hamle yapmadı</p>
+            <div id="bot-indirilen-kartlar" class="bot-indirilenler"></div>
+        </div>
+
+        <hr>
+
+        <!-- OYUNCU BÖLÜMÜ -->
+        <div class="bolum">
+            <h3>Senin Elin (Seçmek için kartlara tıkla)</h3>
+            <div id="oyuncu-kartlari" class="kart-alani"></div>
+            <p>Senin Puanın: <span id="oyuncu-puan-yazi">0</span> | Biriken Cezan: <span id="oyuncu-ceza-yazi" class="ceza-yazi">0</span></p>
+        </div>
+
+        <!-- HAMLE BUTONLARI -->
+        <div id="butonlar">
+            <button onclick="kombinasyonDene()">Seçili Kartlarla Kombinasyon Yap</button>
+            <button onclick="pasGecDene()" class="pas-btn">Seçili Kartı Kapalı At (Pas)</button>
+        </div>
+        
+        <div id="deste-bilgi">
+            <p>Destede Kalan Kart: <span id="kalan-kart-yazi">86</span></p>
+            <p id="bildirim-alani" style="color: #ffd700; font-weight: bold; margin-top:10px;"></p>
+        </div>
+    </div>
+
+    <script src="Square86.js"></script>
+    
+    <script>
+        let secilenKartEndeksleri = [];
+
+        function kartSec(index) {
+            let pozisyon = secilenKartEndeksleri.indexOf(index);
+            if (pozisyon > -1) {
+                secilenKartEndeksleri.splice(pozisyon, 1);
+            } else {
+                secilenKartEndeksleri.push(index);
+            }
+            arayuzuGuncelle();
+        }
+
+        function arayuzuGuncelle() {
+            const oyuncuAlani = document.getElementById("oyuncu-kartlari");
+            oyuncuAlani.innerHTML = "";
+            oyuncuEli.forEach((kart, index) => {
+                let isSecili = secilenKartEndeksleri.includes(index) ? "secili" : "";
+                let kartKlas = kart === "JOKER" ? "kart joker" : "kart";
+                oyuncuAlani.innerHTML += `<div class="${kartKlas} ${isSecili}" onclick="kartSec(${index})">${kart}</div>`;
+            });
+
+            const rakipAlani = document.getElementById("rakip-kartlari");
+            rakipAlani.innerHTML = "";
+            rakipEli.forEach(() => {
+                rakipAlani.innerHTML += `<div class="kart kapali">🎴</div>`;
+            });
+
+            const botIndirilenAlani = document.getElementById("bot-indirilen-kartlar");
+            botIndirilenAlani.innerHTML = "";
+            rakipSonIndirilenler.forEach(kart => {
+                let kartKlas = kart === "JOKER" ? "kart joker" : "kart";
+                botIndirilenAlani.innerHTML += `<div class="${kartKlas}">${kart}</div>`;
+            });
+
+            document.getElementById("oyuncu-puan-yazi").innerText = oyuncuPuan;
+            document.getElementById("rakip-puan-yazi").innerText = rakipPuan;
+            document.getElementById("oyuncu-ceza-yazi").innerText = suAnkiCezayiHesapla(oyuncuCezaHavuzu);
+            document.getElementById("kalan-kart-yazi").innerText = deste.length;
+            document.getElementById("bot-durum-yazi").innerText = rakipSonHamleTipi;
+        }
+
+        function kombinasyonDene() {
+            if (secilenKartEndeksleri.length === 0) {
+                alert("Lütfen kombinasyon yapmak için kart seçin!");
+                return;
+            }
+            
+            let secilenKartlar = secilenKartEndeksleri.map(i => oyuncuEli[i]);
+            let analiz = eliHesapla(secilenKartlar);
+            
+            if (analiz.tip === "PAS") {
+                alert("Seçtiğin kartlardan geçerli bir çift, 4'lü veya seri çıkmıyor!");
+                return;
+            }
+
+            if (analiz.tip === "CIFT" && secilenKartlar.length !== 2) {
+                alert("Çift kombinasyonu için sadece 2 kart seçmelisin!");
+                return;
+            }
+            if ((analiz.tip === "4LU" || analiz.tip.includes("SERI")) && secilenKartlar.length !== 4) {
+                alert("4'lü veya Seri yapabilmek için elindeki 4 kartın hepsini birden seçmelisin!");
+                return;
+            }
+
+            oyuncuPuan += analiz.puan;
+            document.getElementById("bildirim-alani").innerText = `Tebrikler! ${analiz.tip} indirdin, +${analiz.puan} Puan!`;
+
+            secilenKartEndeksleri.sort((a,b) => b-a).forEach(i => {
+                oyuncuEli.splice(i, 1);
+            });
+
+            while (oyuncuEli.length < 4 && deste.length > 0) {
+                oyuncuEli.push(deste.pop());
+            }
+
+            secilenKartEndeksleri = [];
+            arayuzuGuncelle();
+
+            if (deste.length === 0 && oyuncuEli.length === 0) {
+                oyunFinaliYap();
+                return;
+            }
+
+            setTimeout(() => {
+                rakipHamleYap();
+                arayuzuGuncelle();
+                if (deste.length === 0 && rakipEli.length === 0) oyunFinaliYap();
+            }, 1200);
+        }
+
+        function pasGecDene() {
+            if (secilenKartEndeksleri.length !== 1) {
+                alert("Pas geçmek için elinden tam olarak 1 kapalı kart seçmelisin!");
+                return;
+            }
+
+            let index = secilenKartEndeksleri[0];
+            let atilanKart = oyuncuEli.splice(index, 1)[0];
+            oyuncuCezaHavuzu.push(atilanKart);
+
+            if (deste.length > 0) {
+                oyuncuEli.push(deste.pop());
+            }
+
+            secilenKartEndeksleri = [];
+            document.getElementById("bildirim-alani").innerText = "Pas geçtin. Sıra rakipte...";
+            arayuzuGuncelle();
+
+            if (deste.length === 0 && oyuncuEli.length === 0) {
+                oyunFinaliYap();
+                return;
+            }
+
+            setTimeout(() => {
+                rakipHamleYap();
+                arayuzuGuncelle();
+                if (deste.length === 0 && rakipEli.length === 0) oyunFinaliYap();
+            }, 1200);
+        }
+
+        function oyunFinaliYap() {
+            oyuncuEli.forEach(k => oyuncuCezaHavuzu.push(k));
+            rakipEli.forEach(k => rakipCezaHavuzu.push(k));
+            oyuncuEli = [];
+            rakipEli = [];
+            arayuzuGuncelle();
+            oyunBitti();
+        }
+
+        oyunuBaslat();
+        arayuzuGuncelle();
+    </script>
+</body>
+</html>
