@@ -233,3 +233,49 @@ function oyunBitti() {
 
     alert(sonucMesaji);
 }
+// 4. EKRANI (RAYÜZÜ) GÜNCELLEME FONKSİYONU
+function arayuzuGuncelle() {
+    // Oyuncunun puanını ve biriken toplam cezasını yazdırıyoruz
+    // (Dizideki sayıların toplamını hesaplayıp ekrana veriyoruz)
+    const toplamOyuncuCeza = oyuncuCezaHavuzu.reduce((a, b) => a + b, 0);
+    
+    // HTML'deki elementleri ID'lerine göre bulup içlerini güncelliyoruz
+    document.getElementById("player-score").innerText = oyuncuPuan;
+    document.getElementById("penalty").innerText = toplamOyuncuCeza;
+    
+    // Rakip (Bot) puanını güncelleme
+    document.getElementById("bot-score").innerText = rakipPuan;
+    
+    // Kalan Deste Sayısı
+    document.getElementById("deck-count").innerText = deste.length;
+}
+
+// 5. PAS GEÇME (KAPALI KART ATMA) FONKSİYONU
+function pasGec(secilenKartIndeksi) {
+    if(secilenKartIndeksi === undefined || secilenKartIndeksi < 0) {
+        alert("Lütfen pas geçmek için elinizden bir kart seçin!");
+        return;
+    }
+    
+    // Seçilen kartı elden çıkarıp ceza havuzuna atıyoruz
+    let atilanKart = oyuncuEli.splice(secilenKartIndeksi, 1)[0];
+    
+    // Eğer atılan kart sayıysa ceza havuzuna ekle (Joker değilse)
+    if (typeof atilanKart === "number") {
+        oyuncuCezaHavuzu.push(atilanKart);
+    }
+    
+    // Desteden yeni kart çek (Eğer destede kart kaldıysa)
+    if(deste.length > 0) {
+        oyuncuEli.push(deste.pop());
+    }
+    
+    // Arayüzü yenile ki ekrandaki ceza puanı güncellensin
+    arayuzuGuncelle();
+    
+    // Sırayı rakibe devret (Rakip hamle fonksiyonunu buraya bağlayacağız)
+    rakipHamleYap();
+}
+
+// Oyunu başlattığımızda ekranın ilk halini doldurması için 
+// oyunuBaslat fonksiyonunun en sonuna arayuzuGuncelle(); eklemeyi unutma!
