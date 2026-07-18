@@ -1,5 +1,5 @@
 // ==========================================
-// SQUARE86 - SORUNSUZ OYUN MOTORU V2
+// SQUARE86 - KART DENGESİ DÜZELTİLMİŞ MOTOR
 // ==========================================
 
 let deste = [];
@@ -41,6 +41,7 @@ function desteyiKaristir(kartlar) {
 
 function oyunuBaslat() {
     deste = desteyiKaristir(desteOlustur());
+    oyuncuEli = [deste.pop(), sizeofPop(), deste.pop(), deste.pop()]; // Alttaki pop'lar ile aynı
     oyuncuEli = [deste.pop(), deste.pop(), deste.pop(), deste.pop()];
     rakipEli = [deste.pop(), deste.pop(), deste.pop(), deste.pop()];
     
@@ -103,7 +104,7 @@ function eliHesapla(kartlar) {
 }
 
 function suAnkiCezayiHesapla(havuz) {
-    if (!havuz || havuz.length === 0) return 0;
+    if (!havuz || pool.length === 0) return 0;
     return havuz.reduce((toplam, kart) => {
         let val = kart === "JOKER" ? 20 : Number(kart);
         return toplam + (val * 10);
@@ -123,21 +124,21 @@ function yerdekiKartiAlDene() {
     window.arayuzuGuncelle();
 }
 
-// YENİLENEN VE ASLA KİLİTLENMEYEN BOT YAPAY ZEKASI
+// ARTIK KART SAYISINI ASLA BOZMAYAN BOT YAPAY ZEKASI
 function rakipHamleYap() {
-    // 1. EKSİK KART VARSA TAMAMLA (Oyun içi güvenlik kuralı)
+    // KURAL 1: Bot tura başlamadan önce elinde kesinlikle en az 4 kart olmalı (Eğer önceki el kombinasyon yaptıysa desteden çeker)
     while (rakipEli.length < 4 && deste.length > 0) {
         rakipEli.push(deste.pop());
     }
 
     if (rakipEli.length === 0) return;
 
-    // 2. SEÇİM AŞAMASI (Yerde oyuncunun kartı var mı?)
+    // KURAL 2: Yerde senin pas geçerek bıraktığın teklif kartı var mı?
     if (yerdekiTeklifKarti !== null && teklifSahibi === "OYUNCU") {
         let testEli = [...rakipEli, yerdekiTeklifKarti];
         let kombinasyonYapiyorMu = false;
 
-        // Kart 4'lü kombinasyon kurabiliyor mu?
+        // Bot bu kartı alırsa 4'lü kombinasyon kurabiliyor mu?
         for(let i=0; i<testEli.length; i++) {
             for(let j=i+1; j<testEli.length; j++) {
                 for(let k=j+1; k<testEli.length; k++) {
@@ -148,15 +149,15 @@ function rakipHamleYap() {
             }
         }
 
-        // Karar: Kart işe yarıyorsa veya >= 8 büyük bir kart ise bot kartı çalar.
+        // Karar mekanizması: İşe yarıyorsa veya değerliyse bot kartı KAPIYOR (Eli geçici olarak 5 kart oluyor)
         if (kombinasyonYapiyorMu || yerdekiTeklifKarti === "JOKER" || Number(yerdekiTeklifKarti) >= 8) {
             rakipEli.push(yerdekiTeklifKarti);
-            rakipSonHamleTipi = `Rakip yerdeki ${yerdekiTeklifKarti} kartını eline aldı. Cezan iptal edildi!`;
+            rakipSonHamleTipi = `Rakip yerdeki ${yerdekiTeklifKarti} kartını eline aldı. Cezan silindi!`;
             yerdekiTeklifKarti = null;
             teklifSahibi = null;
             document.getElementById("teklif-kart-yazi").innerText = "-";
         } else {
-            // İstemezse, oyuncunun kartı kalıcı olarak cezaya dönüşür
+            // Bot kartı istemedi, senin kartın kalıcı cezaya gitti.
             oyuncuCezaHavuzu.push(yerdekiTeklifKarti);
             yerdekiTeklifKarti = null;
             teklifSahibi = null;
@@ -164,24 +165,36 @@ function rakipHamleYap() {
         }
     }
 
-    // 3. KOMBİNASYON AŞAMASI (Bot elindeki kombinasyonları masaya indirir)
-    // Önce 4'lü kombinasyon/seri kontrolü (Tüm eliyle veya elindeki 4 kartla)
+    // KURAL 3: KOMBİNASYON İNDİRME AŞAMASI
+    // Botun elinde 4 veya 5 kart olabilir. Elindeki tüm kart kombinasyon olasılıklarını tarar.
+    
+    // 3A: 4'lü Kombinasyon veya Seri Kontrolü
     if (rakipEli.length >= 4) {
-        // Elindeki ilk 4 kartı test et
-        let ilkDort = rakipEli.slice(0, 4);
-        let analiz4 = eliHesapla(ilkDort);
-        if (analiz4.tip !== "PAS") {
-            rakipPuan += analiz4.puan;
-            rakipSonIndirilenler = [...ilkDort];
-            rakipSonHamleTipi = `Rakip ${analiz4.tip} yaptı! (+${analiz4.puan} Puan)`;
-            rakipEli.splice(0, 4); // İndirilen kartları elden çıkar
-            
-            while (rakipEli.length < 4 && deste.length > 0) { rakipEli.push(deste.pop()); }
-            return;
+        for (let i = 0; i < rakipEli.length; i++) {
+            for (let j = i + 1; j < rakipEli.length; j++) {
+                for (let k = j + 1; k < rakipEli.length; k++) {
+                    for (let l = k + 1; l < rakipEli.length; l++) {
+                        let dortluAdayi = [rakipEli[i], rakipEli[j], rakipEli[k], rakipEli[l]];
+                        let analiz4 = eliHesapla(dortluAdayi);
+                        if (analiz4.tip !== "PAS") {
+                            rakipPuan += analiz4.puan;
+                            rakipSonIndirilenler = [...dortluAdayi];
+                            rakipSonHamleTipi = `Rakip ${analiz4.tip} yaptı! (+${analiz4.puan} Puan)`;
+                            
+                            // İndirilen 4 kartı elden çıkar
+                            rakipEli = rakipEli.filter((_, idx) => idx !== i && idx !== j && idx !== k && idx !== l);
+                            
+                            // Eli hemen 4'e tamamla ve hamleyi bitir
+                            while (rakipEli.length < 4 && deste.length > 0) { rakipEli.push(deste.pop()); }
+                            return;
+                        }
+                    }
+                }
+            }
         }
     }
 
-    // Çift Kontrolü
+    // 3B: Çift Kontrolü
     for (let i = 0; i < rakipEli.length; i++) {
         for (let j = i + 1; j < rakipEli.length; j++) {
             let ikili = [rakipEli[i], rakipEli[j]];
@@ -191,16 +204,20 @@ function rakipHamleYap() {
                 rakipSonIndirilenler = [...ikili];
                 rakipSonHamleTipi = `Rakip Çift indirdi! (+${analiz2.puan} Puan)`;
                 
+                // İndirilen çifti elden çıkar
                 rakipEli.splice(j, 1);
                 rakipEli.splice(i, 1);
                 
+                // Eli hemen 4'e tamamla ve hamleyi bitir
                 while (rakipEli.length < 4 && deste.length > 0) { rakipEli.push(deste.pop()); }
                 return;
             }
         }
     }
 
-    // 4. PAS/TEKLİF AŞAMASI (Eğer hiç kombinasyon yapamadıysa veya elinde fazla kart kaldıysa)
+    // KURAL 4: PAS / TEKLİF AŞAMASI (Hiçbir şey indiremediyse)
+    // Bot yerde kartı KAPSAYDI eli 5'ti, KAPMADIYSA 4'tü.
+    // Her iki durumda da elindeki en yüksek kartı teklif olarak sahaya atar.
     if (rakipEli.length > 0) {
         let enBuyukEndeks = 0;
         let enBuyukDeger = -1;
@@ -216,7 +233,9 @@ function rakipHamleYap() {
         document.getElementById("teklif-kart-yazi").innerText = yerdekiTeklifKarti + " (Rakibin Teklifi)";
     }
 
-    // Elini son kez 4'e tamamla
+    // KURAL 5: SON DENGEYİ SAĞLAMA
+    // Eğer bot yerden kart alıp (5 kart) üzerine bir de pas geçtiyse (-1 kart), eli tam 4 kalır ve desteden çekmez.
+    // Eğer bot yerden kart ALMADIYSA (4 kart) ve pas geçtiyse (-1 kart), eli 3'e düşer. İşte o zaman desteden 1 kart çekip 4'e tamamlar.
     while (rakipEli.length < 4 && deste.length > 0) {
         rakipEli.push(deste.pop());
     }
