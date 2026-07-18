@@ -29,7 +29,7 @@
         }
         #teklif-alani {
             background-color: #1a3a2a;
-            padding: 10px;
+            padding: 15px;
             border-radius: 8px;
             border: 1px dashed #ffbc42;
             text-align: center;
@@ -68,7 +68,7 @@
         <div id="butonlar">
             <button onclick="kombinasyonDene()">Seçili Kartlarla Kombinasyon Yap</button>
             <button onclick="pasGecDene()" class="pas-btn">Seçili Kartı Teklif Et (Pas)</button>
-            <button onclick="yerdekiKartiAlDene()" id="yerden-al-btn" style="background-color: #2196F3; display: none; margin-top: 5px;">Yerdeki Teklif Kartını Al</button>
+            <button onclick="yerdekiKartiAlDene()" id="yerden-al-btn" style="background-color: #2196F3; display: none; margin-top: 8px; width: 100%; font-weight: bold; padding: 10px;">Yerdeki Teklif Kartını Al</button>
         </div>
         
         <div id="deste-bilgi">
@@ -102,7 +102,7 @@
                 oyuncuAlani.innerHTML += `<div class="${kartKlas} ${isSecili}" onclick="kartSec(${index})">${kart}</div>`;
             });
 
-            // 2. Rakip Elini Çiz (Kapalı Kapak Emojisiyle)
+            // 2. Rakip Elini Çiz
             const rakipAlani = document.getElementById("rakip-kartlari");
             rakipAlani.innerHTML = "";
             rakipEli.forEach(() => {
@@ -155,7 +155,7 @@
                 return;
             }
 
-            // Eğer yerde botun bıraktığı ve bizim almadığımız bir teklif varsa, pas geçip kombinasyon indirdiğimiz için artık o kart botun cezasına kalıcı yazılır.
+            // Yerde reddedilmeyi bekleyen bir rakip teklifi varsa, biz kombinasyon yaptığımız için botun kartı onun cezasına kalıcı işlenir.
             if(yerdekiTeklifKarti !== null && teklifSahibi === "RAKIP") {
                 rakipCezaHavuzu.push(yerdekiTeklifKarti);
                 yerdekiTeklifKarti = null;
@@ -195,7 +195,6 @@
                 return;
             }
 
-            // Biz pas geçerken yerde hala botun eski bir teklif kartı duruyorsa, onu reddetmiş oluruz ve botun cezasına kalıcı işlenir.
             if(yerdekiTeklifKarti !== null && teklifSahibi === "RAKIP") {
                 rakipCezaHavuzu.push(yerdekiTeklifKarti);
             }
@@ -230,7 +229,6 @@
             oyunBitti();
         }
 
-        // Oyunu ve arayüzü tetikliyoruz
         oyunuBaslat();
         arayuzuGuncelle();
     </script>
