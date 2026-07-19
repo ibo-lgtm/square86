@@ -1,5 +1,5 @@
 // ==========================================
-// SQUARE86 - KART KORUMA VE EKRAN GARANTİLİ MOTOR
+// SQUARE86 - SENKRONİZE OYUN MOTORU
 // ==========================================
 
 window.deste = [];
@@ -51,11 +51,6 @@ function oyunuBaslat() {
     window.teklifSahibi = null;
     window.rakipSonIndirilenler = [];
     window.rakipSonHamleTipi = "Oyun başladı, hamleni seç.";
-    
-    // Arayüzün yüklenmeme ihtimaline karşı güvenli çağrı
-    setTimeout(() => {
-        if (typeof window.arayuzuGuncelle === "function") window.arayuzuGuncelle();
-    }, 50);
 }
 
 function eliHesapla(kartlar) {
@@ -108,7 +103,7 @@ function eliHesapla(kartlar) {
 
 function suAnkiCezayiHesapla(havuz) {
     if (!havuz || havuz.length === 0) return 0;
-    return havuz.reduce((toplam, kart) => {
+    return poolSum = havuz.reduce((toplam, kart) => {
         let val = kart === "JOKER" ? 20 : Number(kart);
         return toplam + (val * 10);
     }, 0);
@@ -117,11 +112,10 @@ function suAnkiCezayiHesapla(havuz) {
 function yerdekiKartiAlDene() {
     if (!window.yerdekiTeklifKarti || window.teklifSahibi !== "RAKIP") return;
     
-    // Oyuncu yerdeki kartı alır, eli geçici olarak 5 olur
     window.oyuncuEli.push(window.yerdekiTeklifKarti);
     
     let bildirim = document.getElementById("bildirim-alani");
-    if(bildirim) bildirim.innerText = `Rakibin teklif ettiği ${window.yerdekiTeklifKarti} kartını aldın!`;
+    if(bildirim) bildirim.innerText = `Rakibin teklif ettiği ${window.yerdekiTeklifKarti} kartını aldın! Elin 5 kart oldu.`;
     
     window.yerdekiTeklifKarti = null;
     window.teklifSahibi = null;
@@ -133,17 +127,6 @@ function yerdekiKartiAlDene() {
 }
 
 function rakipHamleYap() {
-    // Oyuncu kart atıp 4'ün altına düştüyse (3 kaldıysa) desteden çekip 4 yapar.
-    // Eğer elinde 5 kart varken kart atıp 4'e düştüyse burası çalışmaz, kart çekmez!
-    while (window.oyuncuEli.length < 4 && window.deste.length > 0) {
-        window.oyuncuEli.push(window.deste.pop());
-    }
-
-    // Rakibin eli de 4'ün altına düşerse tamamlar
-    while (window.rakipEli.length < 4 && window.deste.length > 0) {
-        window.rakipEli.push(window.deste.pop());
-    }
-
     if (window.rakipEli.length === 0) return;
 
     // RAKİP KART DEĞERLENDİRME
@@ -188,7 +171,6 @@ function rakipHamleYap() {
                             window.rakipEli = window.rakipEli.filter((_, idx) => idx !== i && idx !== j && idx !== k && idx !== l);
                             
                             while (window.rakipEli.length < 4 && window.deste.length > 0) { window.rakipEli.push(window.deste.pop()); }
-                            if (typeof window.arayuzuGuncelle === "function") window.arayuzuGuncelle();
                             return;
                         }
                     }
@@ -210,14 +192,13 @@ function rakipHamleYap() {
                     window.rakipEli.splice(i, 1);
                     
                     while (window.rakipEli.length < 4 && window.deste.length > 0) { window.rakipEli.push(window.deste.pop()); }
-                    if (typeof window.arayuzuGuncelle === "function") window.arayuzuGuncelle();
                     return;
                 }
             }
         }
     }
 
-    // RAKİP PAS GEÇİYOR VEYA ORTAYA KART ATIP ELİNİ EKSİLTİYOR
+    // RAKİP PAS GEÇİYOR
     if (window.rakipEli.length > 0) {
         let enBuyukEndeks = 0;
         let enBuyukDeger = -1;
@@ -232,18 +213,15 @@ function rakipHamleYap() {
         window.rakipSonHamleTipi = `Rakip pas geçti ve ${window.yerdekiTeklifKarti} kartını ortaya teklif etti!`;
     }
 
-    // Tur sonunda hem kendi elini hem oyuncunun elini 4'e tamamlar (eğer 3'e düşmüşlerse)
+    // Tur sonunda botun eli 4'ün altına düşerse tamamlar. Ama eli 5 iken 1 attıysa 4 kalacağı için çekmez!
     while (window.rakipEli.length < 4 && window.deste.length > 0) { window.rakipEli.push(window.deste.pop()); }
-    while (window.oyuncuEli.length < 4 && window.deste.length > 0) { window.oyuncuEli.push(window.deste.pop()); }
 
-    // HTML element güncellemeleri için korumalı alan
     let teklifYazi = document.getElementById("teklif-kart-yazi");
     if(teklifYazi && window.yerdekiTeklifKarti) {
         teklifYazi.innerText = window.yerdekiTeklifKarti + " (Rakibin Teklifi)";
     }
 
     if (window.deste.length === 0) { oyunBitti(); }
-    if (typeof window.arayuzuGuncelle === "function") window.arayuzuGuncelle();
 }
 
 function oyunBitti() {
