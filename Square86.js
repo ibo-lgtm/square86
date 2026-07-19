@@ -1,5 +1,5 @@
 // ==========================================
-// SQUARE86 - 4 KART DENGESİ GARANTİLENMİŞ MOTOR
+// SQUARE86 - OTOMATİK 4 KART DENGELEME MOTORU
 // ==========================================
 
 window.deste = [];
@@ -39,7 +39,7 @@ function desteyiKaristir(kartlar) {
 function oyunuBaslat() {
     window.deste = desteyiKaristir(desteOlustur());
     
-    // Oyun başında herkese 4 kart dağıtılır
+    // Herkes 4 kartla başlar
     window.oyuncuEli = [window.deste.pop(), window.deste.pop(), window.deste.pop(), window.deste.pop()];
     window.rakipEli = [window.deste.pop(), window.deste.pop(), window.deste.pop(), window.deste.pop()];
     
@@ -51,6 +51,9 @@ function oyunuBaslat() {
     window.teklifSahibi = null;
     window.rakipSonIndirilenler = [];
     window.rakipSonHamleTipi = "Oyun başladı, hamleni seç.";
+    
+    // Arayüzü tetikle
+    if (typeof window.arayuzuGuncelle === "function") window.arayuzuGuncelle();
 }
 
 function eliHesapla(kartlar) {
@@ -109,13 +112,12 @@ function suAnkiCezayiHesapla(havuz) {
     }, 0);
 }
 
-// Oyuncunun kart almasını sağlayan fonksiyon
 function yerdekiKartiAlDene() {
     if (!window.yerdekiTeklifKarti || window.teklifSahibi !== "RAKIP") return;
     
-    // Oyuncu kartı alır, eli geçici olarak 5 olur
+    // Kartı alınca el 5'e çıkar
     window.oyuncuEli.push(window.yerdekiTeklifKarti);
-    document.getElementById("bildirim-alani").innerText = `Rakibin teklif ettiği ${window.yerdekiTeklifKarti} kartını aldın! Eli 5 karta çıktı.`;
+    document.getElementById("bildirim-alani").innerText = `Rakibin teklif ettiği ${window.yerdekiTeklifKarti} kartını aldın! (Elindeki kart: 5)`;
     
     window.yerdekiTeklifKarti = null;
     window.teklifSahibi = null;
@@ -124,28 +126,28 @@ function yerdekiKartiAlDene() {
     if (typeof window.arayuzuGuncelle === "function") window.arayuzuGuncelle();
 }
 
-// OYUNCU KART ATTIĞINDA VEYA PAS GEÇTİĞİNDE ÇALIŞACAK KONTROL DÖNGÜSÜ
-// index.html'deki kart atma fonksiyonunun sonuna veya pas butonuna eklenmelidir.
-function oyuncuHamle SonuKontrol() {
-    // Oyuncu elinden kart çıkarttığı için 4'ün altına düştüyse (yani 3 kaldıysa) desteden çekip 4 yapar.
-    // Eğer elinde 5 kart vardı ve 1 tane attıysa (4 kaldıysa) bu döngü çalışmaz ve 4 kartta kalır!
+// ARKA PLANDA SESSİZCE ÇALIŞAN KORUMA FONKSİYONU
+// index.html'e dokunmadan eldeki eksilmeleri otomatik düzeltir.
+function oyuncuEksik KartlariTamamla() {
+    // El 4'ün altına düştüyse (3 kaldıysa) desteden çekip 4 yapar.
+    // Eğer el 5 ise ve kart atılıp 4 kaldıysa burası çalışmaz (çekmez!) böylece el 4 kalır.
     while (window.oyuncuEli.length < 4 && window.deste.length > 0) {
         window.oyuncuEli.push(window.deste.pop());
     }
-    if (typeof window.arayuzuGuncelle === "function") window.arayuzuGuncelle();
 }
-window.oyuncuHamleSonuKontrol = oyuncuHamleSonuKontrol;
-
 
 function rakipHamleYap() {
-    // Botun eli de asla 4'ün altına (3'e) düşemez. Eksikse tura başlamadan tamamlar.
+    // Önce oyuncunun eksik kartı varsa tamamlayalım ki ekran doğru güncellensin
+    oyuncuEksikKartlariTamamla();
+
+    // Rakibin kartları eksikse tura başlamadan tamamlar
     while (window.rakipEli.length < 4 && window.deste.length > 0) {
         window.rakipEli.push(window.deste.pop());
     }
 
     if (window.rakipEli.length === 0) return;
 
-    // RAKİP YERDEKİ KARTI DEĞERLENDİRİYOR
+    // RAKİP TEKLİF DEĞERLENDİRME
     if (window.yerdekiTeklifKarti !== null && window.teklifSahibi === "OYUNCU") {
         let testEli = [...window.rakipEli, window.yerdekiTeklifKarti];
         let kombinasyonYapiyorMu = false;
@@ -160,7 +162,6 @@ function rakipHamleYap() {
             }
         }
 
-        // Eğer işine yarıyorsa rakip kartı kapar (Eli geçici olarak 5 olur)
         if (kombinasyonYapiyorMu || window.yerdekiTeklifKarti === "JOKER" || Number(window.yerdekiTeklifKarti) >= 8) {
             window.rakipEli.push(window.yerdekiTeklifKarti);
             window.rakipSonHamleTipi = `Rakip yerdeki ${window.yerdekiTeklifKarti} kartını eline aldı. Cezan silindi!`;
@@ -175,7 +176,7 @@ function rakipHamleYap() {
         }
     }
 
-    // RAKİP KOMBİNASYON İNDİRME AŞAMASI
+    // RAKİP KOMBİNASYON İNDİRME AŞAMALARI
     if (window.rakipEli.length >= 4) {
         for (let i = 0; i < window.rakipEli.length; i++) {
             for (let j = i + 1; j < window.rakipEli.length; j++) {
@@ -187,11 +188,10 @@ function rakipHamleYap() {
                             window.rakipPuan += analiz4.puan;
                             window.rakipSonIndirilenler = [...dortluAdayi];
                             window.rakipSonHamleTipi = `Rakip ${analiz4.tip} yaptı! (+${analiz4.puan} Puan)`;
-                            
                             window.rakipEli = window.rakipEli.filter((_, idx) => idx !== i && idx !== j && idx !== k && idx !== l);
                             
-                            // Kart indirip eli boşaldığı için hemen 4'e tamamlıyoruz
                             while (window.rakipEli.length < 4 && window.deste.length > 0) { window.rakipEli.push(window.deste.pop()); }
+                            if (typeof window.arayuzuGuncelle === "function") window.arayuzuGuncelle();
                             return;
                         }
                     }
@@ -209,19 +209,18 @@ function rakipHamleYap() {
                     window.rakipPuan += analiz2.puan;
                     window.rakipSonIndirilenler = [...ikili];
                     window.rakipSonHamleTipi = `Rakip Çift indirdi! (+${analiz2.puan} Puan)`;
-                    
                     window.rakipEli.splice(j, 1);
                     window.rakipEli.splice(i, 1);
                     
-                    // Çift indirdiğinde el 4'ün altına düşeceği için 4'e tamamlıyoruz
                     while (window.rakipEli.length < 4 && window.deste.length > 0) { window.rakipEli.push(window.deste.pop()); }
+                    if (typeof window.arayuzuGuncelle === "function") window.arayuzuGuncelle();
                     return;
                 }
             }
         }
     }
 
-    // RAKİP PAS GEÇİYOR / KART TEKLİF EDİYOR
+    // RAKİP KART TEKLİF EDİYOR (PAS GEÇİYOR)
     if (window.rakipEli.length > 0) {
         let enBuyukEndeks = 0;
         let enBuyukDeger = -1;
@@ -237,14 +236,12 @@ function rakipHamleYap() {
         document.getElementById("teklif-kart-yazi").innerText = window.yerdekiTeklifKarti + " (Rakibin Teklifi)";
     }
 
-    // KRİTİK DENGELİYİCİ: 
-    // Eğer bot tur başında yerdeki kartı ALDIYSA eli 5'ti. Pas geçip 1 kart atınca eli 4 kaldı. Bu döngü çalışmaz (kart çekmez).
-    // Eğer bot tur başında yerdeki kartı ALMADIYSA eli 4'tü. Pas geçip 1 kart atınca eli 3'e düştü. O zaman bu döngü çalışır ve elini 4 yapar!
-    while (window.rakipEli.length < 4 && window.deste.length > 0) {
-        window.rakipEli.push(window.deste.pop());
-    }
+    // Bot hamlesini bitirirken hem botun hem oyuncunun elini son kez kontrol edip eşitler
+    while (window.rakipEli.length < 4 && window.deste.length > 0) { window.rakipEli.push(window.deste.pop()); }
+    oyuncuEksikKartlariTamamla();
 
     if (window.deste.length === 0) { oyunBitti(); }
+    if (typeof window.arayuzuGuncelle === "function") window.arayuzuGuncelle();
 }
 
 function oyunBitti() {
@@ -267,6 +264,9 @@ function oyunBitti() {
 
     alert(sonucMesaji);
 }
+
+// Eski hatalı fonksiyon adını tamamen sildim, yerine bunu export ettim
+window.oyuncuEksikKartlariTamamla = oyuncuEksikKartlariTamamla;
 
 window.oyunuBaslat = oyunuBaslat;
 window.eliHesapla = eliHesapla;
