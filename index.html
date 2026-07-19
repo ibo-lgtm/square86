@@ -96,7 +96,7 @@
             // 1. Oyuncu Elini Çiz
             const oyuncuAlani = document.getElementById("oyuncu-kartlari");
             oyuncuAlani.innerHTML = "";
-            oyuncuEli.forEach((kart, index) => {
+            window.oyuncuEli.forEach((kart, index) => {
                 let isSecili = secilenKartEndeksleri.includes(index) ? "secili" : "";
                 let kartKlas = kart === "JOKER" ? "kart joker" : "kart";
                 oyuncuAlani.innerHTML += `<div class="${kartKlas} ${isSecili}" onclick="kartSec(${index})">${kart}</div>`;
@@ -105,28 +105,28 @@
             // 2. Rakip Elini Çiz
             const rakipAlani = document.getElementById("rakip-kartlari");
             rakipAlani.innerHTML = "";
-            rakipEli.forEach(() => {
+            window.rakipEli.forEach(() => {
                 rakipAlani.innerHTML += `<div class="kart kapali">🎴</div>`;
             });
 
             // 3. Botun En Son İndirdiği Kartları Göster
             const botIndirilenAlani = document.getElementById("bot-indirilen-kartlar");
             botIndirilenAlani.innerHTML = "";
-            rakipSonIndirilenler.forEach(kart => {
+            window.rakipSonIndirilenler.forEach(kart => {
                 let kartKlas = kart === "JOKER" ? "kart joker" : "kart";
                 botIndirilenAlani.innerHTML += `<div class="${kartKlas}">${kart}</div>`;
             });
 
             // 4. Yazıları ve Skorları Doldur
-            document.getElementById("oyuncu-puan-yazi").innerText = oyuncuPuan;
-            document.getElementById("rakip-puan-yazi").innerText = rakipPuan;
-            document.getElementById("oyuncu-ceza-yazi").innerText = suAnkiCezayiHesapla(oyuncuCezaHavuzu);
-            document.getElementById("kalan-kart-yazi").innerText = deste.length;
-            document.getElementById("bot-durum-yazi").innerText = rakipSonHamleTipi;
+            document.getElementById("oyuncu-puan-yazi").innerText = window.oyuncuPuan;
+            document.getElementById("rakip-puan-yazi").innerText = window.rakipPuan;
+            document.getElementById("oyuncu-ceza-yazi").innerText = window.suAnkiCezayiHesapla(window.oyuncuCezaHavuzu);
+            document.getElementById("kalan-kart-yazi").innerText = window.deste.length;
+            document.getElementById("bot-durum-yazi").innerText = window.rakipSonHamleTipi;
 
             // 5. Mavi "Yerden Al" Butonunu Kontrol Et
             const yerdenAlBtn = document.getElementById("yerden-al-btn");
-            if (yerdekiTeklifKarti !== null && teklifSahibi === "RAKIP") {
+            if (window.yerdekiTeklifKarti !== null && window.teklifSahibi === "RAKIP") {
                 yerdenAlBtn.style.display = "inline-block";
             } else {
                 yerdenAlBtn.style.display = "none";
@@ -139,8 +139,8 @@
                 return;
             }
             
-            let secilenKartlar = secilenKartEndeksleri.map(i => oyuncuEli[i]);
-            let analiz = eliHesapla(secilenKartlar);
+            let secilenKartlar = secilenKartEndeksleri.map(i => window.oyuncuEli[i]);
+            let analiz = window.eliHesapla(secilenKartlar);
             
             if (analiz.tip === "PAS") {
                 alert("Seçtiğin kartlardan geçerli bir çift, 4'lü veya seri çıkmıyor!");
@@ -155,37 +155,37 @@
                 return;
             }
 
-            // Yerde reddedilmeyi bekleyen bir rakip teklifi varsa, biz kombinasyon yaptığımız için botun kartı onun cezasına kalıcı işlenir.
-            if(yerdekiTeklifKarti !== null && teklifSahibi === "RAKIP") {
-                rakipCezaHavuzu.push(yerdekiTeklifKarti);
-                yerdekiTeklifKarti = null;
-                teklifSahibi = null;
+            if(window.yerdekiTeklifKarti !== null && window.teklifSahibi === "RAKIP") {
+                window.rakipCezaHavuzu.push(window.yerdekiTeklifKarti);
+                window.yerdekiTeklifKarti = null;
+                window.teklifSahibi = null;
                 document.getElementById("teklif-kart-yazi").innerText = "-";
             }
 
-            oyuncuPuan += analiz.puan;
+            window.oyuncuPuan += analiz.puan;
             document.getElementById("bildirim-alani").innerText = `Tebrikler! ${analiz.tip} indirdin, +${analiz.puan} Puan!`;
 
             secilenKartEndeksleri.sort((a,b) => b-a).forEach(i => {
-                oyuncuEli.splice(i, 1);
+                window.oyuncuEli.splice(i, 1);
             });
 
-            while (oyuncuEli.length < 4 && deste.length > 0) {
-                oyuncuEli.push(deste.pop());
+            // Kombinasyon yapınca el boşalırsa elini 4'e tamamla
+            while (window.oyuncuEli.length < 4 && window.deste.length > 0) {
+                window.oyuncuEli.push(window.deste.pop());
             }
 
             secilenKartEndeksleri = [];
             arayuzuGuncelle();
 
-            if (deste.length === 0 && oyuncuEli.length === 0) {
-                oyunFinaliYap();
+            if (window.deste.length === 0 && window.oyuncuEli.length === 0) {
+                window.oyunBitti();
                 return;
             }
 
             setTimeout(() => {
-                rakipHamleYap();
+                window.rakipHamleYap();
                 arayuzuGuncelle();
-                if (deste.length === 0 && rakipEli.length === 0) oyunFinaliYap();
+                if (window.deste.length === 0 && window.rakipEli.length === 0) window.oyunBitti();
             }, 1200);
         }
 
@@ -195,41 +195,44 @@
                 return;
             }
 
-            if(yerdekiTeklifKarti !== null && teklifSahibi === "RAKIP") {
-                rakipCezaHavuzu.push(yerdekiTeklifKarti);
+            if(window.yerdekiTeklifKarti !== null && window.teklifSahibi === "RAKIP") {
+                window.rakipCezaHavuzu.push(window.yerdekiTeklifKarti);
             }
 
             let index = secilenKartEndeksleri[0];
-            yerdekiTeklifKarti = oyuncuEli.splice(index, 1)[0];
-            teklifSahibi = "OYUNCU";
             
-            document.getElementById("teklif-kart-yazi").innerText = yerdekiTeklifKarti + " (Senin Teklifin)";
+            // Kartı elden çıkartıyoruz
+            window.yerdekiTeklifKarti = window.oyuncuEli.splice(index, 1)[0];
+            window.teklifSahibi = "OYUNCU";
+            
+            document.getElementById("teklif-kart-yazi").innerText = window.yerdekiTeklifKarti + " (Senin Teklifin)";
 
-            if (deste.length > 0) {
-                oyuncuEli.push(deste.pop());
+            // MATEMATİKSEL KONTROL: 
+            // Eğer kart attıktan sonra elimiz 4'ün altına düştüyse (3 kaldıysa) desteden ÇEK.
+            // Eğer elimizde 5 kart vardı ve 1 atınca tam 4 kaldıysa, desteden KART ÇEKME!
+            while (window.oyuncuEli.length < 4 && window.deste.length > 0) {
+                window.oyuncuEli.push(window.deste.pop());
             }
 
             secilenKartEndeksleri = [];
             document.getElementById("bildirim-alani").innerText = "Pas geçtin ve kartını teklif ettin. Sıra rakipte...";
             arayuzuGuncelle();
 
-            if (deste.length === 0 && oyuncuEli.length === 0) {
-                oyunFinaliYap();
+            if (window.deste.length === 0 && window.oyuncuEli.length === 0) {
+                window.oyunBitti();
                 return;
             }
 
             setTimeout(() => {
-                rakipHamleYap();
+                window.rakipHamleYap();
                 arayuzuGuncelle();
-                if (deste.length === 0 && rakipEli.length === 0) oyunFinaliYap();
+                if (window.deste.length === 0 && window.rakipEli.length === 0) window.oyunBitti();
             }, 1200);
         }
 
-        function oyunFinaliYap() {
-            oyunBitti();
-        }
-
-        oyunuBaslat();
+        // İlk açılış
+        window.oyunuBaslat();
+        window.arayuzuGuncelle = arayuzuGuncelle; // Dışarıdan tetiklenebilsin diye bağladık
         arayuzuGuncelle();
     </script>
 </body>
